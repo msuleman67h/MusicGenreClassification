@@ -1,0 +1,3 @@
+# Music Genre Classification
+
+The goal of this project is to identify the music genre such as pop, rock, hip-hop, metal, etc...
