@@ -1,10 +1,14 @@
-from music_dataset import MusicDataset
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, multilabel_confusion_matrix
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.preprocessing import LabelEncoder
+
+from music_dataset import MusicDataset
+
 
 # -Desc.:
 #   This function will find the best fit paramaters for a Gradient Boosted
@@ -16,9 +20,9 @@ from sklearn.metrics import accuracy_score, multilabel_confusion_matrix
 def gradient_boosted(X, y):
     # Set possible parameters for model tuning
     parameters = {
-        'learning_rate':[0.0001, 0.001, 0.01, 0.1, 0.2, 0.3],
-        'n_estimators':[1, 2, 4, 8, 16, 32, 64, 100, 200],
-        'max_depth':np.linspace(1, 32, 32, endpoint=True)
+        'learning_rate': [0.01, 0.1, 0.2, 0.3],
+        'n_estimators': [1, 2, 4, 8, 16, 32, 64, 100, 200],
+        'max_depth': np.linspace(1, 32, 32, endpoint=True)
     }
     # Split 20% testing, 80% training
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
@@ -28,8 +32,7 @@ def gradient_boosted(X, y):
     y_pred = gbtc_cv.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     confusion_matricies = multilabel_confusion_matrix(y_test, y_pred)
-    confusion = confusion_matrix(y_test, y_pred)
-    best_params = gbtc_cv.best_params
+    best_params = gbtc_cv.best_params_
 
     # Print out Gradient Boosted Tree report
     print('-Gradient Boosted Tree Report-')
@@ -57,6 +60,7 @@ def gradient_boosted(X, y):
         print('\t\t<label> specificity: ', specificity)
         print('\t\t<label> precision: ', precision)
 
+
 def plot_spectrogram(Y, sr, hop_length, y_axis="linear"):
     plt.figure(figsize=(25, 10))
     librosa.display.specshow(Y,
@@ -71,9 +75,14 @@ def plot_spectrogram(Y, sr, hop_length, y_axis="linear"):
     plt.tight_layout()
     plt.show()
 
+
 def main():
     gtzan_dataset = MusicDataset('../data/gtzan/genres_original')
     gtzan_dataset.load_music()
+    le = LabelEncoder()
+    le.fit(gtzan_dataset.target)
+    target = le.transform(gtzan_dataset.target)
+    gradient_boosted(np.array(gtzan_dataset.reduced_mfccs), target)
 
 
 if __name__ == '__main__':
