@@ -1,64 +1,82 @@
 from glob import glob
 from os.path import basename
 
-import librosa.display
 import numpy as np
-from librosa import stft, amplitude_to_db
+from librosa import amplitude_to_db
 from librosa.feature import melspectrogram, mfcc
-from matplotlib import pyplot as plt
 from scipy.io import wavfile
 from tqdm import tqdm
 
 
 class MusicDataset:
-    def __init__(self, path, audio_sample_rate):
+    def __init__(self, path, audio_sample_rate: int = 22050, number_of_tracks: int = 1000):
         self.path = path
-        self.music_dataset = []
         self.audio_sample_rate = audio_sample_rate
+        self.music_dataset = []
+        self.target = []
+        self.mel_spectrogram = []
+        self.mfccs = []
+        self.reduced_mfccs = []
 
-    def load_music(self, is_sorted_by_genre: bool = True):
-        if is_sorted_by_genre:
-            sub_directories = glob(f"{self.path}/*")
-            pbar = tqdm(sub_directories)
-            for genre_subdir in pbar:
-                pbar.set_description(f"Loading {basename(genre_subdir)}")
-                music_files = glob(f"{genre_subdir}/*")
-                
-                # Processing each music file
-                for music_file in music_files:
-                    try:
-                        track_sample_rate, data = wavfile.read(music_file)
-                        if track_sample_rate != self.audio_sample_rate:
-                            print(f"Skipping track {music_file} with sample rate != {self.audio_sample_rate}")
-                            continue
-                        # Normalize the music data (min-max)
-                        # 16-bit recording, 2^15 is max value
-                        data = data / 2 ** (16 - 1)
-                        self.music_dataset.append((data, basename(genre_subdir)))
-                    except ValueError:
-                        # Skipping one corrupt track jazz.00054.wav
-                        pass
+    def load_music(self):
+        """
+        Loads each sound track from GTZAN data set to a list of numpy array. Also, stores their respective
+        genres in a separate list.
+        """
+        min_track_length = 31.0
+        sub_directories = glob(f"{self.path}/*")
+        pbar = tqdm(sub_directories)
+        for genre_subdir in pbar:
+            pbar.set_description(f"Loading {basename(genre_subdir)}")
+            music_files = glob(f"{genre_subdir}/*")
+            for music_file in music_files:
+                try:
+                    track_sample_rate, data = wavfile.read(music_file)
+                    if track_sample_rate != self.audio_sample_rate:
+                        print(f"Skipping track {music_file} with sample rate != {self.audio_sample_rate}")
+                        continue
+                    # Min-max normalizing the music data
+                    data = data / 2 ** (16 - 1)
+                    self.music_dataset.append(data)
+                    track_length = data.shape[0] / self.audio_sample_rate
+                    # keeping track of the smallest track, all the track will will trimmed to this point.
+                    if track_length < min_track_length:
+                        min_track_length = track_length
+                    self.target.append(basename(genre_subdir))
+                except ValueError:
+                    # Skipping over a corrupted track
+                    pass
+        print(f"The minimum track length is {min_track_length} seconds")
+        # Making sure all the tracks are of same length.
+        self.music_dataset = [track[:int(min_track_length * self.audio_sample_rate)] for track in self.music_dataset]
+        self.extract_mel_spectrogram()
+        self.extract_mfccs()
+        self.extract_reduced_mfccs()
 
-    def extract_stft_db_scale(self):
-        for music in self.music_dataset:
-            short_fourier_transform = stft(music[0], hop_length=256)
-            music_scaled = np.abs(short_fourier_transform) ** 2
-            amplitude_to_db(music_scaled, ref=np.max)
+    def extract_mel_spectrogram(self):
+        """
+        Extracts the Mel-Spectrogram for each track and stores them in instance variable
+        """
+        for track in tqdm(self.music_dataset, desc='Extracting Mel-Spectrogram'):
+            mel_spec = melspectrogram(track, sr=self.audio_sample_rate)
+            mel_spec_db = amplitude_to_db(mel_spec, ref=np.max)
+            self.mel_spectrogram.append(mel_spec_db)
 
-    # def extract_mel_spectrogram(self):
-    #     for music in self.music_dataset:
-    #         mel_spec = melspectrogram(music[0], sr=music[1])
-    #         mel_spec_db = amplitude_to_db(mel_spec, ref=np.max)
-    #         self.mel_spectrogram.append(mel_spec_db)
-    #
-    # def extract_mfcc(self):
-    #     for music in self.music_dataset:
-    #         self.mfccs.append(mfcc(music[0], n_mfcc=13, sr=music[1]))
-    #         plt.figure(figsize=(25, 10))
-    #         plt.figure(figsize=(25, 10))
-    #         librosa.display.specshow(self.mfccs[0],
-    #                                  x_axis="time",
-    #                                  sr=music[1])
-    #         plt.colorbar(format="%+2.f")
-    #         plt.show()
-    #         print("xx")
+    def extract_mfccs(self):
+        """
+        Extracts the MFCCs for each track and stores them in instance variable
+        """
+        for music in tqdm(self.music_dataset, desc="Extracting MFCC's"):
+            temp = mfcc(music, n_mfcc=39, sr=self.audio_sample_rate)
+            self.mfccs.append(temp)
+
+    def extract_reduced_mfccs(self):
+        """
+        Reduces the dimension of MFCCs and saves it in a separate instance variable
+        """
+        for mfcc in tqdm(self.mfccs, desc="Reducing MFCC's"):
+            mean_var_coeff = []
+            for mfcc_coeff in mfcc:
+                mean_var_coeff.append(np.mean(mfcc_coeff))
+                mean_var_coeff.append(np.var(mfcc_coeff))
+            self.reduced_mfccs.append(mean_var_coeff)
