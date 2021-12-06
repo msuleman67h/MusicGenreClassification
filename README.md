@@ -7,7 +7,7 @@ For dataset choice, we decided to use GTZAN Dataset[1], which is made up of ten 
   
 Additionally, we have the option of using the Free Music Archive (FMA) dataset found in the UCI Machine Learning Repository[3]. The structure of the dataset is similar to the GTZAN dataset, because of this we should be able to use it along with the GTZAN dataset for the training of the model. The smallest dataset in FMA has 8,000 tracks which are divided equally into 8 genres. The sampling rate of most of the tracks is 44,100 Hz with a bit rate of 320 kbit/s and is in stereo.
 
-\[1\]: http://marsyas.info/downloads/datasets.html
+\[1\]: https://www.kaggle.com/andradaolteanu/gtzan-dataset-music-genre-classification
 
 \[2\]: Tzanetakis, George, and Perry Cook. "Musical genre classification of audio signals." IEEE Transactions on speech and audio processing 10.5 (2002): 293-302.
 
