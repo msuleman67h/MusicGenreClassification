@@ -23,13 +23,16 @@ class MusicDataset:
             for genre_subdir in pbar:
                 pbar.set_description(f"Loading {basename(genre_subdir)}")
                 music_files = glob(f"{genre_subdir}/*")
+                
+                # Processing each music file
                 for music_file in music_files:
                     try:
                         track_sample_rate, data = wavfile.read(music_file)
                         if track_sample_rate != self.audio_sample_rate:
                             print(f"Skipping track {music_file} with sample rate != {self.audio_sample_rate}")
                             continue
-                        # normalize the music data
+                        # Normalize the music data (min-max)
+                        # 16-bit recording, 2^15 is max value
                         data = data / 2 ** (16 - 1)
                         self.music_dataset.append((data, basename(genre_subdir)))
                     except ValueError:
