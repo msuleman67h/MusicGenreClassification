@@ -2,6 +2,7 @@ CS482FinalProject
 CS482FinalProject.pub
 .idea
 data/
+*.txt
 
 ### Python template
 # Byte-compiled / optimized / DLL files

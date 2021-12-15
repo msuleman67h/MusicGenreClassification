@@ -1,14 +1,11 @@
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
-<<<<<<< HEAD
 import numpy as np
-=======
 from sklearn.neighbors import KNeighborsClassifier
->>>>>>> c45f1069b5e55c5290c2ff85cb9f5c6f06b87d71
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, multilabel_confusion_matrix
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_val_score
 from sklearn.preprocessing import LabelEncoder
 
 from music_dataset import MusicDataset
@@ -29,7 +26,7 @@ def k_nearest_neighbors(X, y):
 
     # Create KNN Classifier and perform grid search cross validation
     knn = KNeighborsClassifier()
-    knn_cv = GridSearchCV(knn, param_grid)
+    knn_cv = GridSearchCV(knn, param_grid, verbose=10, n_jobs=4)
     knn_cv.fit(X_train, y_train)
     y_pred = knn_cv.predict(X_test)
     accuracy = accuracy_score(X_test, y_pred)
@@ -75,15 +72,16 @@ def gradient_boosted(X, y):
     parameters = {
         'learning_rate': [0.01, 0.1, 0.2, 0.3],
         'n_estimators': [1, 2, 4, 8, 16, 32, 64, 100, 200],
-        'max_depth': np.linspace(1, 32, 32, endpoint=True)
+        'max_depth': np.linspace(1, 10, 10, endpoint=True)
     }
     # Split 20% testing, 80% training
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     gbtc = GradientBoostingClassifier()
-    gbtc_cv = GridSearchCV(gbtc, parameters)
+    gbtc_cv = GridSearchCV(gbtc, parameters, verbose=10)
     gbtc_cv.fit(X_train, y_train)
     y_pred = gbtc_cv.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
+
     confusion_matricies = multilabel_confusion_matrix(y_test, y_pred)
     best_params = gbtc_cv.best_params_
 
@@ -135,7 +133,7 @@ def main():
     le = LabelEncoder()
     le.fit(gtzan_dataset.target)
     target = le.transform(gtzan_dataset.target)
-    gradient_boosted(np.array(gtzan_dataset.reduced_mfccs), target)
+    k_nearest_neighbors(np.array(gtzan_dataset.music_dataset), target)
 
 
 if __name__ == '__main__':
