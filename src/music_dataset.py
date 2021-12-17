@@ -58,7 +58,7 @@ class MusicDataset:
         Extracts the Mel-Spectrogram for each track and stores them in instance variable
         """
         for track in tqdm(self.music_dataset, desc='Extracting Mel-Spectrogram'):
-            mel_spec = melspectrogram(track, sr=self.audio_sample_rate, n_fft=1024, hop_length=256)
+            mel_spec = melspectrogram(track, sr=self.audio_sample_rate, n_fft=2048, hop_length=256)
             mel_spec_db = amplitude_to_db(mel_spec, ref=np.max)
             self.mel_spectrogram.append(mel_spec_db)
 
@@ -66,8 +66,8 @@ class MusicDataset:
         """
         Extracts the MFCCs for each track and stores them in instance variable
         """
-        for music in tqdm(self.music_dataset, desc="Extracting MFCC's"):
-            temp = mfcc(music, n_mfcc=39, sr=self.audio_sample_rate)
+        for music, log_mel_spec in tqdm(zip(self.music_dataset, self.mel_spectrogram), desc="Extracting MFCC's"):
+            temp = mfcc(music, S=log_mel_spec, n_mfcc=39, sr=self.audio_sample_rate)
             self.mfccs.append(temp)
 
     def extract_reduced_mfccs(self):
