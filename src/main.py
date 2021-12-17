@@ -2,17 +2,17 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, multilabel_confusion_matrix
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_val_score
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
 
 from music_dataset import MusicDataset
 
 
 def k_nearest_neighbors(X, y):
-    '''This function does the nearest neighbor stuff'''
+    """This function does the nearest neighbor stuff"""
 
     # Split the data into 80% train, 20% test
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, train_size=0.8, random_state=0)
@@ -26,10 +26,10 @@ def k_nearest_neighbors(X, y):
 
     # Create KNN Classifier and perform grid search cross validation
     knn = KNeighborsClassifier()
-    knn_cv = GridSearchCV(knn, param_grid, verbose=10, n_jobs=4)
+    knn_cv = GridSearchCV(knn, param_grid, verbose=10, n_jobs=10, cv=5)
     knn_cv.fit(X_train, y_train)
     y_pred = knn_cv.predict(X_test)
-    accuracy = accuracy_score(X_test, y_pred)
+    accuracy = accuracy_score(y_test, y_pred)
     best_params = knn_cv.best_params_
     per_class_confusions = multilabel_confusion_matrix(y_test, y_pred)
 
@@ -53,21 +53,25 @@ def k_nearest_neighbors(X, y):
         recall = tp / (tp + fn)
         specificity = tn / (tn + fp)
         precision = tp / (tp + fp)
-        
+
         print(f'\t\t{i} accuracy: ', accuracy)
         print(f'\t\t{i} recall: ', recall)
         print(f'\t\t{i} specificity: ', specificity)
         print(f'\t\t{i} precision: ', precision)
     print()
 
-# -Desc.:
-#   This function will find the best fit paramaters for a Gradient Boosted
-# Tree Classifier given preprocessed dataset. The model will be trained using
-# grid search w/ cross validation. Overall accuracy and individual class
-# metrics will be printed out at the end.
-# -Input:
-#   X - predictor data, y - target data corresponding to X
+
 def gradient_boosted(X, y):
+    """
+    This function will find the best fit paramaters for a Gradient Boosted
+    Tree Classifier given preprocessed dataset. The model will be trained using
+    grid search w/ cross validation. Overall accuracy and individual class
+    metrics will be printed out at the end.
+
+    :param X: predictor data
+    :param y: target data corresponding to X
+    :return: None
+    """
     # Set possible parameters for model tuning
     parameters = {
         'learning_rate': [0.01, 0.1, 0.2, 0.3],
@@ -77,7 +81,7 @@ def gradient_boosted(X, y):
     # Split 20% testing, 80% training
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     gbtc = GradientBoostingClassifier()
-    gbtc_cv = GridSearchCV(gbtc, parameters, verbose=10)
+    gbtc_cv = GridSearchCV(gbtc, parameters, verbose=10, n_jobs=10, cv=5)
     gbtc_cv.fit(X_train, y_train)
     y_pred = gbtc_cv.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)

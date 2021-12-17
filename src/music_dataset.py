@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 
 class MusicDataset:
-    def __init__(self, path, audio_sample_rate: int = 22050, number_of_tracks: int = 1000):
+    def __init__(self, path, audio_sample_rate: int = 22050):
         self.path = path
         self.audio_sample_rate = audio_sample_rate
         self.music_dataset = []
@@ -39,7 +39,7 @@ class MusicDataset:
                     data = data / 2 ** (16 - 1)
                     self.music_dataset.append(data)
                     track_length = data.shape[0] / self.audio_sample_rate
-                    # keeping track of the smallest track, all the track will will trimmed to this point.
+                    # keeping track of the smallest track, all the track will trim to this point.
                     if track_length < min_track_length:
                         min_track_length = track_length
                     self.target.append(basename(genre_subdir))
@@ -58,7 +58,7 @@ class MusicDataset:
         Extracts the Mel-Spectrogram for each track and stores them in instance variable
         """
         for track in tqdm(self.music_dataset, desc='Extracting Mel-Spectrogram'):
-            mel_spec = melspectrogram(track, sr=self.audio_sample_rate)
+            mel_spec = melspectrogram(track, sr=self.audio_sample_rate, n_fft=1024, hop_length=256)
             mel_spec_db = amplitude_to_db(mel_spec, ref=np.max)
             self.mel_spectrogram.append(mel_spec_db)
 
@@ -66,8 +66,8 @@ class MusicDataset:
         """
         Extracts the MFCCs for each track and stores them in instance variable
         """
-        for music in tqdm(self.music_dataset, desc="Extracting MFCC's"):
-            temp = mfcc(music, n_mfcc=39, sr=self.audio_sample_rate)
+        for music, log_mel_spec in tqdm(zip(self.music_dataset, self.mel_spectrogram), desc="Extracting MFCC's"):
+            temp = mfcc(music, S=log_mel_spec, n_mfcc=39, sr=self.audio_sample_rate)
             self.mfccs.append(temp)
 
     def extract_reduced_mfccs(self):
