@@ -137,7 +137,7 @@ def main():
     le = LabelEncoder()
     le.fit(gtzan_dataset.target)
     target = le.transform(gtzan_dataset.target)
-    k_nearest_neighbors(np.array(gtzan_dataset.music_dataset), target)
+    gradient_boosted(np.array(gtzan_dataset.music_dataset), target)
 
 
 if __name__ == '__main__':

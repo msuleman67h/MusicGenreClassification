@@ -66,8 +66,8 @@ class MusicDataset:
         """
         Extracts the MFCCs for each track and stores them in instance variable
         """
-        for music, log_mel_spec in tqdm(zip(self.music_dataset, self.mel_spectrogram), desc="Extracting MFCC's"):
-            temp = mfcc(music, S=log_mel_spec, n_mfcc=39, sr=self.audio_sample_rate)
+        for music in tqdm(self.music_dataset, desc="Extracting MFCC's"):
+            temp = mfcc(music, n_mfcc=39, sr=self.audio_sample_rate)
             self.mfccs.append(temp)
 
     def extract_reduced_mfccs(self):
