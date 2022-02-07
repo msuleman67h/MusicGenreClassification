@@ -2,19 +2,23 @@ from glob import glob
 from os.path import basename
 
 import numpy as np
+import torchlibrosa
 from librosa import amplitude_to_db
 from librosa.feature import melspectrogram, mfcc
 from scipy.io import wavfile
 from tqdm import tqdm
+import torch
 
 
 class MusicDataset:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def __init__(self, path, audio_sample_rate: int = 22050):
         self.path = path
         self.audio_sample_rate = audio_sample_rate
         self.music_dataset = []
         self.target = []
-        self.mel_spectrogram = []
+        self.mel_spectrogram = None
         self.mfccs = []
         self.reduced_mfccs = []
 
@@ -37,7 +41,7 @@ class MusicDataset:
                         continue
                     # Min-max normalizing the music data
                     data = data / 2 ** (16 - 1)
-                    self.music_dataset.append(data)
+                    self.music_dataset.append(torch.from_numpy(data).float().to(MusicDataset.device))
                     track_length = data.shape[0] / self.audio_sample_rate
                     # keeping track of the smallest track, all the track will trim to this point.
                     if track_length < min_track_length:
@@ -49,6 +53,7 @@ class MusicDataset:
         print(f"The minimum track length is {min_track_length} seconds")
         # Making sure all the tracks are of same length.
         self.music_dataset = [track[:int(min_track_length * self.audio_sample_rate)] for track in self.music_dataset]
+        self.music_dataset = torch.stack(self.music_dataset).to(MusicDataset.device)
         self.extract_mel_spectrogram()
         self.extract_mfccs()
         self.extract_reduced_mfccs()
@@ -57,10 +62,12 @@ class MusicDataset:
         """
         Extracts the Mel-Spectrogram for each track and stores them in instance variable
         """
-        for track in tqdm(self.music_dataset, desc='Extracting Mel-Spectrogram'):
-            mel_spec = melspectrogram(track, sr=self.audio_sample_rate, n_fft=2048, hop_length=256)
-            mel_spec_db = amplitude_to_db(mel_spec, ref=np.max)
-            self.mel_spectrogram.append(mel_spec_db)
+        # Spectrogram
+        spectrogram_extractor = torchlibrosa.Spectrogram(n_fft=1024, hop_length=256).to(MusicDataset.device)
+        spectrogram_out = spectrogram_extractor.forward(self.music_dataset)
+
+        logmel_extractor = torchlibrosa.LogmelFilterBank(sr=self.audio_sample_rate, n_fft=1024, n_mels=128).to(MusicDataset.device)
+        self.mel_spectrogram = torch.squeeze(logmel_extractor.forward(spectrogram_out))
 
     def extract_mfccs(self):
         """
